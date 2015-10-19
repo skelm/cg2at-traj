@@ -1,5 +1,14 @@
 #!/usr/bin/perl 
-#Revision date: 01/10/2015
+# Revision date: 17/10/2015
+#
+# Author: Phil Stansfeld (University of Oxford)
+# 
+# CG2AT converts a single coarse-grained PDB file to an all-atom PDB file.
+#
+# This version of the script does not solvate the system (to save time) and requires no user interaction (to enable easy automation).
+#
+# Visit MemProtMD at http://sbcb.bioch.ox.ac.uk/memprotmd
+#
 
 ############# Locations for Programs etc ################
 
@@ -13,7 +22,7 @@ my $gromacs = "/usr/local/gromacs/bin";
 my $pymol = "/usr/local/pymol/1.4/pymol/pymol.exe";
 
 # Location for Pulchra (including executable) - Only for 'full' conversion
-my $pulchra = "/Users/seb/bin/pulchra";
+my $pulchra = "~/bin/pulchra";
 
 # Location for Modeller (including executable) - Only for 'full' conversion
 my $modeller = "/usr/local/bin/mod9.15";

@@ -5,9 +5,9 @@ CG2AT-Traj is a program to convert a coarse-grained molecular dynamics simulatio
 This project started on Sat Oct 17 2015 as part of a "hack day" at the CECAM workshop for "Setting up simulations".
 
 The original hack day team:
- * Willy Evangelista
- * Rohith Mohan
- * Sebastian Kelm
+ * Sebastian Kelm (https://github.com/skelm)
+ * Rohith Mohan (https://github.com/rohithmohan)
+ * Willy Evangeslista (https://github.com/wevangelista)
 
 Team mentor: Phil Stansfeld (University of Oxford)
 
