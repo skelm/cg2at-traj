@@ -3,10 +3,9 @@
 """
 Created on Sat Oct 17 14:53:55 2015
 
-@author: Sebastian Kelm
-@author: Rohith Moran
-@author: Willy Evangeslista
-
+@author: Sebastian Kelm (https://github.com/skelm)
+@author: Rohith Mohan (https://github.com/rohithmohan)
+@author: Willy Evangeslista (https://github.com/wevangelista)
 """
 
 import sys
@@ -63,9 +62,9 @@ def run_cg2at(in_fname, out_fname):
         if cg2at_outfile:
             title = read_title(in_fname)
             with open(out_fname, "wb") as fout:
-                fout.write("MODEL\n")
+                #fout.write("MODEL\n")
                 fout.write(read_pdb_change_title(cg2at_outfile, title))
-                fout.write("ENDMDL\n")
+                #fout.write("ENDMDL\n")
             #shutil.copy(cg2at_outfile, out_fname)
             shutil.rmtree(tempdir)
             return True
@@ -193,7 +192,7 @@ def concatenate_trajectory(infiles, outfile):
     return p.returncode == 0
 
 
-def convert_trajectory(in_trajectory, in_topology, out_trajectory, selection_center=1, selection_output=0, skip=0, pbc=""):
+def convert_trajectory(in_trajectory, in_topology, out_trajectory, selection_center=1, selection_output=0, skip=0, pbc="", sep=False):
     "Converts a trajectory (e.g. XTC) to a different format (e.g. PDB)"
     STDIN = "%d\n%d\n" % (selection_center, selection_output)
     if pbc:
@@ -202,7 +201,11 @@ def convert_trajectory(in_trajectory, in_topology, out_trajectory, selection_cen
         skip = "-skip %d"%skip
     else:
         skip = ""
-    p = subprocess.Popen("gmx trjconv -f %s -s %s -o %s %s %s -center" % (in_trajectory, in_topology, out_trajectory, skip, pbc), shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if sep:
+        sep = "-sep"
+    else:
+        sep = ""
+    p = subprocess.Popen("gmx trjconv -f %s -s %s -o %s %s %s -center %s" % (in_trajectory, in_topology, out_trajectory, skip, pbc, sep), shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate(STDIN)
     
     if not os.path.exists(out_trajectory):
@@ -228,7 +231,7 @@ if __name__ == "__main__":
     parser.add_argument('--out_suffix_at', metavar="SUFFIX", default="_at", help='output file suffix for atomistic representation (default: "_at")')
     parser.add_argument('--out_suffix_cg', metavar="SUFFIX", default="_cg", help='output file suffix for coarse-grained representation (default: "_cg")')
     parser.add_argument('--out_counter_format', metavar="FORMATSTRING", default="%06d", help='output file counter format (default: "%%06d")')
-    parser.add_argument('--delete_cg', default=False, action="store_true", help='conserve disk space by deleting coarse-grained intermediate output files once they are successfully converted to all-atom')
+    #parser.add_argument('--delete_cg', default=False, action="store_true", help='conserve disk space by deleting coarse-grained intermediate output files once they are successfully converted to all-atom')
     parser.add_argument('--clean', default=False, action="store_true", help='conserve disk space by deleting all intermediate output files')
     parser.add_argument('--resume', default=False, action="store_true", help='enable resume mode: skip frames where output files already exist. This is meant to work when re-running the same command after aborting it with CTRL-C.')
     parser.add_argument('--verbose', default=False, action="store_true", help='print some status messages to STDOUT')
@@ -240,8 +243,7 @@ if __name__ == "__main__":
     parser.add_argument('topology', help='input topology file')
     args = parser.parse_args()
     
-    if args.clean:
-        args.delete_cg = True
+    delete_cg = True
     
     selection_center=0
     if args.center_protein:
@@ -265,7 +267,7 @@ if __name__ == "__main__":
             
             os.remove(pdbtraj_temp)
         
-        successes, total = run_cg2at_batch_parallel(pdbtraj, args.out_prefix, outsuffix_at=args.out_suffix_at, outsuffix_cg=args.out_suffix_cg, counter_format=args.out_counter_format, delete_cg=args.delete_cg, verbose=args.verbose, resume=args.resume, processes=args.processes)
+        successes, total = run_cg2at_batch_parallel(pdbtraj, args.out_prefix, outsuffix_at=args.out_suffix_at, outsuffix_cg=args.out_suffix_cg, counter_format=args.out_counter_format, delete_cg=delete_cg, verbose=args.verbose, resume=args.resume, processes=args.processes)
         
         if args.verbose:
             print "%d of %d frames successfuly written" % (successes, total)
