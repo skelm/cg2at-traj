@@ -15,9 +15,10 @@ import tempfile
 import shutil
 from glob import glob
 from multiprocessing import Pool, cpu_count
+from os.path import expanduser
 
-
-CG2AT_path = "/Users/seb/simulations/MemProtMD/CG2AT/cg2at-nosolvate.pl"
+HOME = expanduser("~")
+CG2AT_path = HOME+"/MemProtMD/CG2AT/cg2at-nosolvate.pl"
 
 
 def read_title(fname):
