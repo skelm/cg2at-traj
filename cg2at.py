@@ -40,7 +40,7 @@ def read_pdb_change_title(fname, title=""):
                 lines.append(line)
         return "".join(lines)
 
-    
+
 def write_file(fname, content):
     with open(fname, "wb") as fout:
         fout.write(str(content))
@@ -155,16 +155,16 @@ def _run_cg2at_batch(args):
 def run_cg2at_batch_parallel(infile, outprefix, outsuffix_at="_at", outsuffix_cg="_cg", counter_format="%06d", delete_cg=False, verbose=False, resume=False, processes=1):
     if processes == 1:
         return run_cg2at_batch(infile, outprefix, outsuffix_at, outsuffix_cg, counter_format, delete_cg, verbose, resume)
-    
+
     if processes < 1:
         processes = cpu_count()
     n_models = count_multi_pdb_models(infile)
     if processes > n_models:
         processes = n_models
-    
+
     if processes <= 1:
         return run_cg2at_batch(infile, outprefix, outsuffix_at, outsuffix_cg, counter_format, delete_cg, verbose, resume)
-    
+
     pool = Pool(processes)
     args = []
     for processno in xrange(processes):
@@ -174,17 +174,36 @@ def run_cg2at_batch_parallel(infile, outprefix, outsuffix_at="_at", outsuffix_cg
     except KeyboardInterrupt:
         pool.terminate()
         raise
-    
+
     succeeded = 0
     total = 0
     for s, t in results:
         succeeded += s
         total += t
-    
+
     return (succeeded, total)
-    
+
 
 def concatenate_trajectory(infiles, outfile):
+    if infiles[0].endswith(".pdb") and len(infiles)>1:
+        # Check number of atoms in each file and keep only the largest group of files with the same number of atoms
+        def count_atoms(fname):
+            c=0
+            with open(fname) as f:
+                for line in f:
+                    if line.startswith("ATOM  ") or line.startswith("HETATM"):
+                        c += 1
+            return c
+        from collections import defaultdict
+        atomcounts = defaultdict(list)
+        for fname in infiles:
+            c = count_atoms(fname)
+            atomcounts[c].append(fname)
+        largest_group = max(atomcounts.values(), key=len)
+        if len(largest_group) < len(infiles):
+            print >>sys.stderr, "Dropped", len(infiles)-len(largest_group), "frames, due to missing atoms"
+        infiles = largest_group
+
     p = subprocess.Popen("trjcat -f "+" ".join(infiles)+" -o "+outfile, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
     if p.returncode != 0:
@@ -207,11 +226,11 @@ def convert_trajectory(in_trajectory, in_topology, out_trajectory, selection_cen
         sep = ""
     p = subprocess.Popen("gmx trjconv -f %s -s %s -o %s %s %s -center %s" % (in_trajectory, in_topology, out_trajectory, skip, pbc, sep), shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate(STDIN)
-    
+
     if not os.path.exists(out_trajectory):
         print >>sys.stderr, "Failed to convert trajectory: %s"%(in_trajectory)
-    
-    
+
+
 def remove_cg_solvent(pdbfile, outfile):
     "Remove the CG solvent and ion atoms from a PDB file"
     p = subprocess.Popen("grep -v ' W     W ' %s | grep -v ' ION ' > %s" % (pdbfile, outfile), shell=True)
@@ -242,42 +261,42 @@ if __name__ == "__main__":
     parser.add_argument('trajectory', help='input trajectory file')
     parser.add_argument('topology', help='input topology file')
     args = parser.parse_args()
-    
+
     delete_cg = True
-    
+
     selection_center=0
     if args.center_protein:
         selection_center=1
-    
+
     selection_output=0
     if args.select_protein:
         selection_output=1
-    
+
     pdbtraj_temp = args.out_prefix+args.out_suffix_cg+"_solvated.pdb"
     pdbtraj = args.out_prefix+args.out_suffix_cg+".pdb"
-    
+
     if not (args.resume and (os.path.exists(args.out_prefix+args.out_suffix_at) or os.path.exists(args.out_prefix+args.out_suffix_at+".xtc"))):
-        
+
         if not (args.resume and os.path.exists(pdbtraj)):
             convert_trajectory(args.trajectory, args.topology, pdbtraj_temp, selection_center, selection_output, skip=args.skip, pbc="res")
             assert os.path.exists(pdbtraj_temp), "Failed to convert trajectory to multi-model PDB"
-            
+
             remove_cg_solvent(pdbtraj_temp, pdbtraj)
             assert os.path.exists(pdbtraj), "Failed to filter out solvent from multi-model PDB file"
-            
+
             os.remove(pdbtraj_temp)
-        
+
         successes, total = run_cg2at_batch_parallel(pdbtraj, args.out_prefix, outsuffix_at=args.out_suffix_at, outsuffix_cg=args.out_suffix_cg, counter_format=args.out_counter_format, delete_cg=delete_cg, verbose=args.verbose, resume=args.resume, processes=args.processes)
-        
+
         if args.verbose:
             print "%d of %d frames successfuly written" % (successes, total)
             print "concatenating trajectory using trjcat --> at.xtc and cg.xtc"
-        
+
         shutil.copy(args.out_prefix+args.out_counter_format%0+args.out_suffix_at+".pdb", args.out_prefix+args.out_suffix_at+".pdb")
-        
+
         concatenate_trajectory(glob(args.out_prefix+"*"+args.out_suffix_at+".pdb"), args.out_prefix+args.out_suffix_at)
         #concatenate_trajectory(glob(args.out_prefix+"*"+args.out_suffix_cg+".pdb"), args.out_prefix+args.out_suffix_cg)
-    
+
     if os.path.exists(args.out_prefix+args.out_suffix_at) or os.path.exists(args.out_prefix+args.out_suffix_at+".xtc"):
         if args.clean:
             for fname in glob(args.out_prefix+"*"+args.out_suffix_at+".pdb"):
